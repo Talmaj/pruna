@@ -398,7 +398,11 @@ def is_transformer_pipeline(model: Any) -> bool:
 
 def is_flux_pipeline(model: Any) -> bool:
     """
-    Check if model is a Flux pipeline or a Flux2 pipeline.
+    Check if model is a Flux.1 pipeline.
+
+    Flux.2 pipelines are reported by ``is_flux2_pipeline``. Their transformer
+    forward signature and block modules differ from Flux.1, so algorithms must
+    opt in explicitly.
 
     Parameters
     ----------
@@ -408,12 +412,34 @@ def is_flux_pipeline(model: Any) -> bool:
     Returns
     -------
     bool
-        True if model is a Flux pipeline or a Flux2 pipeline, False otherwise.
+        True if model is a Flux.1 pipeline, False otherwise.
     """
-    if _check_pipeline_type(model, diffusers.pipelines.flux, "Flux"):
-        return True
-    # Check for Flux2 pipelines, older diffusers version might not have flux2 module
-    return hasattr(diffusers.pipelines, "flux2") and _check_pipeline_type(model, diffusers.pipelines.flux2, "Flux2")
+    return _check_pipeline_type(model, diffusers.pipelines.flux, "Flux")
+
+
+def is_flux2_pipeline(model: Any) -> bool:
+    """
+    Check if model is a Flux.2 pipeline.
+
+    This includes ``Flux2Pipeline`` and the Klein pipelines exported from
+    ``diffusers.pipelines.flux2`` (dev, Klein, Klein KV, Klein inpaint).
+    Releases of diffusers that predate the ``flux2`` module are reported as
+    unsupported.
+
+    Parameters
+    ----------
+    model : Any
+        The model to check.
+
+    Returns
+    -------
+    bool
+        True if model is a Flux.2 pipeline, False otherwise.
+    """
+    # Older diffusers versions do not ship the flux2 pipeline module.
+    if not hasattr(diffusers.pipelines, "flux2"):
+        return False
+    return _check_pipeline_type(model, diffusers.pipelines.flux2, "Flux2")
 
 
 def is_sdxl_pipeline(model: Any) -> bool:

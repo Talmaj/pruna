@@ -17,7 +17,7 @@ from typing import Any
 from pruna.algorithms.base.pruna_base import PrunaAlgorithmBase
 from pruna.algorithms.base.tags import AlgorithmTag as tags
 from pruna.config.smash_config import SmashConfigPrefixWrapper
-from pruna.engine.model_checks import has_fused_attention_processor, is_diffusers_model
+from pruna.engine.model_checks import has_fused_attention_processor, is_diffusers_model, is_flux2_pipeline
 from pruna.engine.save import SAVE_FUNCTIONS
 from pruna.engine.utils import ModelContext
 
@@ -29,6 +29,9 @@ class QKVFusing(PrunaAlgorithmBase):
     QKV factorizing fuses the QKV matrices of the denoiser model into a single matrix,
     reducing the number of operations. In the attention layer, we can compute the q, k, v signals
     all at once: the matrix multiplication involve a larger matrix but we compute one operation instead of three.
+    Flux.2 is not supported. Its single-stream blocks are ``Flux2ParallelSelfAttention`` modules
+    without ``to_q``, ``to_k`` and ``to_v``. Fusing projections and then installing one shared
+    attention processor drops the parallel processor, and the forward pass fails.
     """
 
     algorithm_name: str = "qkv_diffusers"
@@ -62,7 +65,9 @@ class QKVFusing(PrunaAlgorithmBase):
 
     def model_check_fn(self, model: Any) -> bool:
         """
-        Check if the model is a pipeline with unet/transformer denoiser compatible with a fused attention processor.
+        Check if the model is a pipeline with a denoiser compatible with fused attention.
+
+        Flux.2 is rejected: see the class docstring.
 
         Parameters
         ----------
@@ -74,6 +79,8 @@ class QKVFusing(PrunaAlgorithmBase):
         bool
             True if the model has a fused attention processor, False otherwise.
         """
+        if is_flux2_pipeline(model):
+            return False
         if is_diffusers_model(model):
             return has_fused_attention_processor(model)
         return False

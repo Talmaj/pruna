@@ -24,6 +24,7 @@ from pruna.config.smash_config import SmashConfigPrefixWrapper
 from pruna.engine.model_checks import (
     is_allegro_pipeline,
     is_cogvideo_pipeline,
+    is_flux2_pipeline,
     is_flux_pipeline,
     is_hunyuan_pipeline,
     is_latte_pipeline,
@@ -44,6 +45,11 @@ class FasterCache(PrunaAlgorithmBase):
       branch output using the conditional branch output
     This implementation reduces the number of tunable parameters by setting pipeline specific parameters according to
     https://github.com/huggingface/diffusers/pull/9562.
+    Flux.2 shares the Flux.1 spatial block identifiers. The frequency-domain unconditional branch
+    approximation expects a spatial tensor (``BCHW``) and a batch that already concatenates the
+    unconditional and conditional forwards. Flux.2 returns packed tokens and, on Klein, runs those
+    two forwards as separate calls, so that approximation is not enabled. Attention skipping still
+    runs, with ``is_guidance_distilled`` set so the denoiser hook does not split the batch.
     """
 
     algorithm_name: str = "fastercache"
@@ -108,6 +114,7 @@ class FasterCache(PrunaAlgorithmBase):
             is_allegro_pipeline,
             is_cogvideo_pipeline,
             is_flux_pipeline,
+            is_flux2_pipeline,
             is_hunyuan_pipeline,
             is_mochi_pipeline,
             is_wan_pipeline,
@@ -157,7 +164,7 @@ class FasterCache(PrunaAlgorithmBase):
             low_frequency_weight_update_timestep_range = (99, 641)
             spatial_attention_block_identifiers = ("transformer_blocks",)
             attention_weight_callback = lambda _: 0.3  # noqa: E731
-        elif is_flux_pipeline(model):
+        elif is_flux_pipeline(model) or is_flux2_pipeline(model):
             spatial_attention_timestep_skip_range = (-1, 961)
             spatial_attention_block_identifiers = (
                 "transformer_blocks",
