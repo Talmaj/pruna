@@ -96,7 +96,10 @@ class RingAttn(PrunaAlgorithmBase):
 
     def model_check_fn(self, model: Any) -> bool:
         """
-        Check if the model is supported by the RingAttn.
+        Check if the model is supported by RingAttn.
+
+        Flux.1 and Wan transformers are supported. Flux.2 is not: ``Flux2Transformer2DModel``
+        does not take Flux.1's ``pooled_projections`` argument, which the ring wrapper forwards.
 
         Parameters
         ----------

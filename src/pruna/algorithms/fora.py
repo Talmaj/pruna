@@ -23,17 +23,24 @@ from ConfigSpace import OrdinalHyperparameter
 from pruna.algorithms.base.pruna_base import PrunaAlgorithmBase
 from pruna.algorithms.base.tags import AlgorithmTag as tags
 from pruna.config.smash_config import SmashConfigPrefixWrapper
-from pruna.engine.model_checks import is_flux_pipeline
+from pruna.engine.model_checks import is_flux2_pipeline, is_flux_pipeline
 from pruna.engine.save import SAVE_FUNCTIONS
 
 
 class FORA(PrunaAlgorithmBase):
     """
-    Implement FORA for the Flux pipeline.
+    Implement FORA for Flux.1 and Flux.2 pipelines.
 
     FORA reuses the outputs of the transformer blocks for N steps before recomputing them.
     Different from the official implementation, this implementation exposes a start step parameter
     that allows to obtain a higher fidelity to the base model.
+
+    Flux.2 keeps the Flux.1 containers ``transformer_blocks`` and ``single_transformer_blocks``,
+    but the block forwards differ: double blocks take separate image and text modulation tensors,
+    and single blocks consume one concatenated token sequence and return one tensor. The cacher
+    wraps ``forward`` and stores whatever the block returns, so that signature difference does
+    not need its own implementation. Flux.2 dev runs the transformer once per step. Flux.2 Klein
+    with classifier-free guidance runs it twice; set ``backbone_calls_per_step`` to 2 then.
     """
 
     algorithm_name: str = "fora"
@@ -87,14 +94,18 @@ class FORA(PrunaAlgorithmBase):
                 "backbone_calls_per_step",
                 sequence=range(1, 4),
                 default_value=1,
-                meta={"desc": "Number of backbone forward passes per diffusion step (e.g., 2 for CFG)."}
-
+                meta={
+                    "desc": (
+                        "Number of backbone forward passes per diffusion step (2 for classifier-free "
+                        "guidance, including Flux.2 Klein). Flux.1-dev and Flux.2 dev use 1."
+                    )
+                },
             ),
         ]
 
     def model_check_fn(self, model: Any) -> bool:
         """
-        Check if the provided model is a Flux pipeline.
+        Check if the provided model is a Flux.1 or Flux.2 pipeline.
 
         Parameters
         ----------
@@ -104,9 +115,9 @@ class FORA(PrunaAlgorithmBase):
         Returns
         -------
         bool
-            True if the model is a Flux pipeline, False otherwise.
+            True if the model is a Flux.1 or Flux.2 pipeline, False otherwise.
         """
-        return is_flux_pipeline(model)
+        return is_flux_pipeline(model) or is_flux2_pipeline(model)
 
     def _apply(self, model: Any, smash_config: SmashConfigPrefixWrapper) -> Any:
         """

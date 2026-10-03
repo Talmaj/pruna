@@ -46,6 +46,7 @@ def get_pack_and_predict_fn(pipeline: Any) -> Callable:
     elif is_sana_pipeline(pipeline):
         return _pack_and_predict_sana
     elif is_flux_pipeline(pipeline):
+        # Flux.1 only. Flux.2's transformer forward has no pooled_projections argument.
         return _pack_and_predict_flux
     else:
         raise ValueError(f"Unknown pipeline: {pipeline.__class__.__name__}")

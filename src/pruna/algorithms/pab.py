@@ -24,6 +24,7 @@ from pruna.config.smash_config import SmashConfigPrefixWrapper
 from pruna.engine.model_checks import (
     is_allegro_pipeline,
     is_cogvideo_pipeline,
+    is_flux2_pipeline,
     is_flux_pipeline,
     is_hunyuan_pipeline,
     is_latte_pipeline,
@@ -40,6 +41,9 @@ class PAB(PrunaAlgorithmBase):
     Pyramid Attention Broadcast (PAB) is a method that speeds up inference in diffusion models by systematically skipping
     attention computations between successive inference steps and reusing cached attention states. This implementation
     reduces the number of tunable parameters by setting pipeline specific parameters according to https://github.com/huggingface/diffusers/pull/9562.
+    Flux.2 uses the same spatial block names as Flux.1 (``transformer_blocks`` and
+    ``single_transformer_blocks``), so it shares that configuration. Diffusers hooks the attention
+    modules inside those blocks, and Flux.2 attention modules implement ``AttentionModuleMixin``.
     """
 
     algorithm_name: str = "pab"
@@ -104,6 +108,7 @@ class PAB(PrunaAlgorithmBase):
             is_allegro_pipeline,
             is_cogvideo_pipeline,
             is_flux_pipeline,
+            is_flux2_pipeline,
             is_hunyuan_pipeline,
             is_mochi_pipeline,
             is_wan_pipeline,
@@ -150,7 +155,7 @@ class PAB(PrunaAlgorithmBase):
             cross_attention_block_identifiers = ("transformer_blocks",)
         elif is_cogvideo_pipeline(model):
             spatial_attention_block_identifiers = ("transformer_blocks",)
-        elif is_flux_pipeline(model):
+        elif is_flux_pipeline(model) or is_flux2_pipeline(model):
             spatial_attention_timestep_skip_range = (100, 950)
             spatial_attention_block_identifiers = (
                 "transformer_blocks",

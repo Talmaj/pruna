@@ -2,12 +2,13 @@ from pruna import PrunaModel
 from pruna.algorithms.pab import PAB
 
 from .base_tester import AlgorithmTesterBase
+from .utils import configure_tiny_flux2_inference
 
 
 class TestPAB(AlgorithmTesterBase):
     """Test the PAB algorithm."""
 
-    models = ["flux_tiny_random"]
+    models = ["flux_tiny_random", "flux2_tiny_random"]
     reject_models = ["opt_tiny_random"]
     allow_pickle_files = False
     algorithm_class = PAB
@@ -16,3 +17,7 @@ class TestPAB(AlgorithmTesterBase):
     def post_smash_hook(self, model: PrunaModel) -> None:
         """Hook to modify the model after smashing."""
         assert model.transformer.is_cache_enabled
+
+    def post_load_hook(self, model: PrunaModel) -> None:
+        """Keep tiny Flux.2 generation inside CPU test limits."""
+        configure_tiny_flux2_inference(model)

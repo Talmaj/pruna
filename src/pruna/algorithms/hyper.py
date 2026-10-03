@@ -43,6 +43,7 @@ class Hyper(PrunaAlgorithmBase):
     Hyper-SD is a distillation framework that segments the diffusion process into time-step groups to preserve and
     reformulate the ODE trajectory. By integrating human feedback and score distillation, it enables near-lossless
     performance with drastically fewer inference steps.
+    The published adapters target Flux.1-dev, not Flux.2. Flux.2 is a different transformer and is rejected.
     """
 
     algorithm_name: str = "hyper"
@@ -106,7 +107,7 @@ class Hyper(PrunaAlgorithmBase):
 
     def model_check_fn(self, model: Any) -> bool:
         """
-        Check if the provided model is a valid Flux model.
+        Check if the model is a Hyper-SD target (SD, SDXL, SD3 or Flux.1).
 
         Parameters
         ----------
@@ -116,7 +117,7 @@ class Hyper(PrunaAlgorithmBase):
         Returns
         -------
         bool
-            True if the model is a valid Flux model, False otherwise.
+            True if the model is an SD, SDXL, SD3 or Flux.1 pipeline, False otherwise.
         """
         return is_flux_pipeline(model) or is_sdxl_pipeline(model) or is_sd_pipeline(model) or is_sd_3_pipeline(model)
 

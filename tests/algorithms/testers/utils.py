@@ -4,6 +4,25 @@ from typing import Any
 from pruna.config.smash_config import SmashConfig
 from pruna.data.diffuser_distillation_data_module import DiffusionDistillationDataModule
 
+# tiny-random/flux2 has a one-layer text encoder and a 1024px default canvas.
+FLUX2_TINY_INFERENCE_ARGS: dict[str, Any] = {
+    "num_inference_steps": 2,
+    "height": 64,
+    "width": 64,
+    "text_encoder_out_layers": (1,),
+}
+
+
+def configure_tiny_flux2_inference(model: Any) -> None:
+    """Use a CPU-sized call for tiny Flux.2 checkpoints.
+
+    The default ``text_encoder_out_layers=(10, 20, 30)`` indexes hidden states the
+    tiny text encoder does not have, and the default resolution is 1024.
+    """
+    pipeline = getattr(model, "model", model)
+    if type(pipeline).__name__.startswith("Flux2"):
+        model.inference_handler.model_args.update(FLUX2_TINY_INFERENCE_ARGS)
+
 
 def restrict_recovery_time(smash_config: SmashConfig, algorithm_name: str) -> None:
     """Restrict the recovery time to a few batches to test iteration multiple time but as few as possible."""
